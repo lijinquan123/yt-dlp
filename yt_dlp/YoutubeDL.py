@@ -2875,7 +2875,9 @@ class YoutubeDL:
             decrypt_command = f'{decrypt_programs[platform.system()]} --key "{decrypt_key}" "{name}" "{decrypt_name}"'
             self.to_screen(f'正在解密DRM视频, 解密命令: {decrypt_command}')
             os.system(decrypt_command)
-            self.to_screen(f'解密完成, 移到{decrypt_name}到{name}')
+            probe_ret = os.popen(f'ffprobe -hide_banner "{decrypt_name}"').read().strip()
+            self.to_screen(f'解密完成, 探测解密文件属性: \n{probe_ret}')
+            self.to_screen(f'移到{decrypt_name}到{name}')
             shutil.move(decrypt_name, name)
         return success, real_download
 
