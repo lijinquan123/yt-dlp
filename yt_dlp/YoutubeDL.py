@@ -41,23 +41,23 @@ from .postprocessor import (EmbedThumbnailPP, FFmpegFixupDuplicateMoovPP, FFmpeg
                             get_postprocessor)
 from .postprocessor.ffmpeg import resolve_mapping as resolve_recode_mapping
 from .update import detect_variant
-from .utils import (ContentTooShortError, DEFAULT_OUTTMPL, DateRange, DownloadCancelled, DownloadError,
-                    EntryNotInPlaylist, ExistingVideoReached, ExtractorError, GeoRestrictedError, HEADRequest, IDENTITY,
-                    ISO3166Utils, LINK_TEMPLATES, LazyList, MaxDownloadsReached, NO_DEFAULT, NUMBER_RE, Namespace,
-                    OUTTMPL_TYPES, POSTPROCESS_WHEN, PagedList, PerRequestProxyHandler, PlaylistEntries, Popen,
-                    PostProcessingError, ReExtractInfo, RejectedVideoReached, STR_FORMAT_RE_TMPL, STR_FORMAT_TYPES,
-                    SameFileError, UnavailableVideoError, YoutubeDLCookieProcessor, YoutubeDLHandler,
-                    YoutubeDLRedirectHandler, age_restricted, args_to_str, bug_reports_message, date_from_str,
-                    determine_ext, determine_protocol, encodeFilename, encode_compat_str, error_to_compat_str,
-                    escapeHTML, expand_path, filter_dict, float_or_none, formatSeconds, format_bytes,
-                    format_decimal_suffix, format_field, get_domain, int_or_none, iri_to_uri, join_nonempty,
-                    locked_file, make_HTTPS_handler, make_dir, merge_headers, network_exceptions, number_of_digits,
-                    orderedSet, parse_filesize, preferredencoding, prepend_extension, register_socks_protocols,
-                    remove_terminal_sequences, render_table, replace_extension, sanitize_filename, sanitize_path,
-                    sanitize_url, sanitized_Request, std_headers, str_or_none, strftime_or_none, subtitles_filename,
-                    supports_terminal_sequences, system_identifier, timetuple_from_msec, to_high_limit_path,
-                    traverse_obj, try_get, url_basename, variadic, version_tuple, windows_enable_vt_mode,
-                    write_json_file, write_string)
+from .utils import (ContentTooShortError, DEFAULT_OUTTMPL, DRMDecryptionError, DateRange, DownloadCancelled,
+                    DownloadError, EntryNotInPlaylist, ExistingVideoReached, ExtractorError, GeoRestrictedError,
+                    HEADRequest, IDENTITY, ISO3166Utils, LINK_TEMPLATES, LazyList, MaxDownloadsReached, NO_DEFAULT,
+                    NUMBER_RE, Namespace, OUTTMPL_TYPES, POSTPROCESS_WHEN, PagedList, PerRequestProxyHandler,
+                    PlaylistEntries, Popen, PostProcessingError, ReExtractInfo, RejectedVideoReached,
+                    STR_FORMAT_RE_TMPL, STR_FORMAT_TYPES, SameFileError, UnavailableVideoError,
+                    YoutubeDLCookieProcessor, YoutubeDLHandler, YoutubeDLRedirectHandler, age_restricted, args_to_str,
+                    bug_reports_message, date_from_str, determine_ext, determine_protocol, encodeFilename,
+                    encode_compat_str, error_to_compat_str, escapeHTML, expand_path, filter_dict, float_or_none,
+                    formatSeconds, format_bytes, format_decimal_suffix, format_field, get_domain, has_drm_decrypted,
+                    int_or_none, iri_to_uri, join_nonempty, locked_file, make_HTTPS_handler, make_dir, merge_headers,
+                    network_exceptions, number_of_digits, orderedSet, parse_filesize, preferredencoding,
+                    prepend_extension, register_socks_protocols, remove_terminal_sequences, render_table,
+                    replace_extension, sanitize_filename, sanitize_path, sanitize_url, sanitized_Request, std_headers,
+                    str_or_none, strftime_or_none, subtitles_filename, supports_terminal_sequences, system_identifier,
+                    timetuple_from_msec, to_high_limit_path, traverse_obj, try_get, url_basename, variadic,
+                    version_tuple, windows_enable_vt_mode, write_json_file, write_string)
 from .version import RELEASE_GIT_HEAD, __version__
 
 if compat_os_name == 'nt':
@@ -1256,11 +1256,11 @@ class YoutubeDL:
                 min_views = self.params.get('min_views')
                 if min_views is not None and view_count < min_views:
                     return 'Skipping %s, because it has not reached minimum view count (%d/%d)' % (
-                    video_title, view_count, min_views)
+                        video_title, view_count, min_views)
                 max_views = self.params.get('max_views')
                 if max_views is not None and view_count > max_views:
                     return 'Skipping %s, because it has exceeded the maximum view count (%d/%d)' % (
-                    video_title, view_count, max_views)
+                        video_title, view_count, max_views)
             if age_restricted(info_dict.get('age_limit'), self.params.get('age_limit')):
                 return 'Skipping "%s" because it is age restricted' % video_title
 
@@ -2809,10 +2809,17 @@ class YoutubeDL:
             decrypt_command = f'{decrypt_programs[platform.system()]} --key "{decrypt_key}" "{name}" "{decrypt_name}"'
             self.to_screen(f'正在解密DRM视频, 解密命令: {decrypt_command}')
             os.system(decrypt_command)
-            self.to_screen(f'解密完成, 探测解密文件属性')
-            os.system(f'ffprobe -hide_banner "{decrypt_name}"')
-            self.to_screen(f'移到{decrypt_name}到{name}')
-            shutil.move(decrypt_name, name)
+            has_decrypted = has_drm_decrypted(name, decrypt_name)
+            self.to_screen(f'解密状态: {has_decrypted}')
+            if has_decrypted:
+                self.to_screen(f'移到{decrypt_name}到{name}')
+                shutil.move(decrypt_name, name)
+            else:
+                with contextlib.suppress(Exception):
+                    os.remove(name)
+                with contextlib.suppress(Exception):
+                    os.remove(decrypt_name)
+                raise DRMDecryptionError("加解密文件相同")
         return success, real_download
 
     def existing_file(self, filepaths, *, default_overwrite=True):

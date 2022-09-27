@@ -46,14 +46,9 @@ import urllib.request
 import xml.etree.ElementTree
 import zlib
 
-from .compat import asyncio, functools  # isort: split
-from .compat import (
-    compat_etree_fromstring,
-    compat_expanduser,
-    compat_HTMLParseError,
-    compat_os_name,
-    compat_shlex_quote,
-)
+from .compat import (asyncio, compat_HTMLParseError, compat_etree_fromstring, compat_expanduser, compat_os_name,
+                     compat_shlex_quote, functools  # isort: split
+                     )
 from .dependencies import brotli, certifi, websockets, xattr
 from .socks import ProxyType, sockssocket
 
@@ -129,11 +124,9 @@ std_headers = {
     'Sec-Fetch-Mode': 'navigate',
 }
 
-
 USER_AGENTS = {
     'Safari': 'Mozilla/5.0 (X11; Linux x86_64; rv:10.0) AppleWebKit/533.20.25 (KHTML, like Gecko) Version/5.0.4 Safari/533.20.27',
 }
-
 
 NO_DEFAULT = object()
 IDENTITY = lambda x: x
@@ -286,6 +279,7 @@ def find_xpath_attr(node, xpath, key, val=None):
     assert re.match(r'^[a-zA-Z_-]+$', key)
     expr = xpath + ('[@%s]' % key if val is None else f"[@{key}='{val}']")
     return node.find(expr)
+
 
 # On python2.6 the xml.etree.ElementTree.Element methods don't support
 # the namespace parameter
@@ -482,11 +476,13 @@ def get_element_text_and_html_by_tag(tag, html):
     For the first element with the specified tag in the passed HTML document
     return its' content (text) and the whole element (html)
     """
+
     def find_or_raise(haystack, needle, exc):
         try:
             return haystack.index(needle)
         except ValueError:
             raise exc
+
     closing_tag = f'</{tag}>'
     whole_start = find_or_raise(
         html, f'<{tag}', compat_HTMLParseError(f'opening {tag} tag not found'))
@@ -508,7 +504,7 @@ def get_element_text_and_html_by_tag(tag, html):
                 offset += next_closing_tag_end
             except HTMLBreakOnClosingTagParser.HTMLBreakOnClosingTagException:
                 return html[content_start:offset + next_closing_tag_start], \
-                    html[whole_start:offset + next_closing_tag_end]
+                       html[whole_start:offset + next_closing_tag_end]
         raise compat_HTMLParseError('unexpected end of html')
 
 
@@ -763,6 +759,7 @@ def expand_path(s):
 
 def orderedSet(iterable, *, lazy=False):
     """Remove all duplicates from the input iterable"""
+
     def _iter():
         seen = []  # Do not use set since the items can be unhashable
         for x in iterable:
@@ -814,11 +811,11 @@ def unescapeHTML(s):
 def escapeHTML(text):
     return (
         text
-        .replace('&', '&amp;')
-        .replace('<', '&lt;')
-        .replace('>', '&gt;')
-        .replace('"', '&quot;')
-        .replace("'", '&#39;')
+            .replace('&', '&amp;')
+            .replace('<', '&lt;')
+            .replace('>', '&gt;')
+            .replace('"', '&quot;')
+            .replace("'", '&#39;')
     )
 
 
@@ -1071,6 +1068,10 @@ class GeoRestrictedError(ExtractorError):
         self.countries = countries
 
 
+class DRMDecryptionError(YoutubeDLError):
+    """DRM decryption error."""
+
+
 class DownloadError(YoutubeDLError):
     """Download Error exception.
 
@@ -1189,7 +1190,7 @@ class XAttrMetadataError(YoutubeDLError):
 
         # Parsing code and msg
         if (self.code in (errno.ENOSPC, errno.EDQUOT)
-                or 'No space left' in self.msg or 'Disk quota exceeded' in self.msg):
+            or 'No space left' in self.msg or 'Disk quota exceeded' in self.msg):
             self.reason = 'NO_SPACE'
         elif self.code == errno.E2BIG or 'Argument list too long' in self.msg:
             self.reason = 'VALUE_TOO_LONG'
@@ -1241,6 +1242,7 @@ def _create_http_connection(ydl_handler, http_class, is_https, *args, **kwargs):
                 raise err
             else:
                 raise OSError('getaddrinfo returns an empty list')
+
         if hasattr(hc, '_create_connection'):
             hc._create_connection = _create_connection
         hc.source_address = (source_address, 0)
@@ -1456,7 +1458,7 @@ class YoutubeDLHTTPSHandler(urllib.request.HTTPSHandler):
                 functools.partial(_create_http_connection, self, conn_class, True), req, **kwargs)
         except urllib.error.URLError as e:
             if (isinstance(e.reason, ssl.SSLError)
-                    and getattr(e.reason, 'reason', None) == 'SSLV3_ALERT_HANDSHAKE_FAILURE'):
+                and getattr(e.reason, 'reason', None) == 'SSLV3_ALERT_HANDSHAKE_FAILURE'):
                 raise YoutubeDLError('SSLV3_ALERT_HANDSHAKE_FAILURE: Try using --legacy-server-connect')
             raise
 
@@ -1505,7 +1507,7 @@ class YoutubeDLCookieJar(http.cookiejar.MozillaCookieJar):
         now = time.time()
         for cookie in self:
             if (not ignore_discard and cookie.discard
-                    or not ignore_expires and cookie.is_expired(now)):
+                or not ignore_expires and cookie.is_expired(now)):
                 continue
             name, value = cookie.name, cookie.value
             if value is None:
@@ -1988,6 +1990,7 @@ if sys.platform == 'win32':
     import ctypes.wintypes
     import msvcrt
 
+
     class OVERLAPPED(ctypes.Structure):
         _fields_ = [
             ('Internal', ctypes.wintypes.LPVOID),
@@ -1997,28 +2000,30 @@ if sys.platform == 'win32':
             ('hEvent', ctypes.wintypes.HANDLE),
         ]
 
+
     kernel32 = ctypes.windll.kernel32
     LockFileEx = kernel32.LockFileEx
     LockFileEx.argtypes = [
-        ctypes.wintypes.HANDLE,     # hFile
-        ctypes.wintypes.DWORD,      # dwFlags
-        ctypes.wintypes.DWORD,      # dwReserved
-        ctypes.wintypes.DWORD,      # nNumberOfBytesToLockLow
-        ctypes.wintypes.DWORD,      # nNumberOfBytesToLockHigh
+        ctypes.wintypes.HANDLE,  # hFile
+        ctypes.wintypes.DWORD,  # dwFlags
+        ctypes.wintypes.DWORD,  # dwReserved
+        ctypes.wintypes.DWORD,  # nNumberOfBytesToLockLow
+        ctypes.wintypes.DWORD,  # nNumberOfBytesToLockHigh
         ctypes.POINTER(OVERLAPPED)  # Overlapped
     ]
     LockFileEx.restype = ctypes.wintypes.BOOL
     UnlockFileEx = kernel32.UnlockFileEx
     UnlockFileEx.argtypes = [
-        ctypes.wintypes.HANDLE,     # hFile
-        ctypes.wintypes.DWORD,      # dwReserved
-        ctypes.wintypes.DWORD,      # nNumberOfBytesToLockLow
-        ctypes.wintypes.DWORD,      # nNumberOfBytesToLockHigh
+        ctypes.wintypes.HANDLE,  # hFile
+        ctypes.wintypes.DWORD,  # dwReserved
+        ctypes.wintypes.DWORD,  # nNumberOfBytesToLockLow
+        ctypes.wintypes.DWORD,  # nNumberOfBytesToLockHigh
         ctypes.POINTER(OVERLAPPED)  # Overlapped
     ]
     UnlockFileEx.restype = ctypes.wintypes.BOOL
     whole_low = 0xffffffff
     whole_high = 0x7fffffff
+
 
     def _lock_file(f, exclusive, block):
         overlapped = OVERLAPPED()
@@ -2033,6 +2038,7 @@ if sys.platform == 'win32':
             # NB: No argument form of "ctypes.FormatError" does not work on PyPy
             raise BlockingIOError(f'Locking file failed: {ctypes.FormatError(ctypes.GetLastError())!r}')
 
+
     def _unlock_file(f):
         assert f._lock_file_overlapped_p
         handle = msvcrt.get_osfhandle(f.fileno())
@@ -2042,6 +2048,7 @@ if sys.platform == 'win32':
 else:
     try:
         import fcntl
+
 
         def _lock_file(f, exclusive, block):
             flags = fcntl.LOCK_EX if exclusive else fcntl.LOCK_SH
@@ -2054,6 +2061,7 @@ else:
             except OSError:  # AOSP does not have flock()
                 fcntl.lockf(f, flags)
 
+
         def _unlock_file(f):
             try:
                 fcntl.flock(f, fcntl.LOCK_UN)
@@ -2064,6 +2072,7 @@ else:
 
         def _lock_file(f, exclusive, block):
             raise LockingUnsupportedError()
+
 
         def _unlock_file(f):
             raise LockingUnsupportedError()
@@ -2398,7 +2407,7 @@ def remove_end(s, end):
 def remove_quotes(s):
     if s is None or len(s) < 2:
         return s
-    for quote in ('"', "'", ):
+    for quote in ('"', "'",):
         if s[0] == quote and s[-1] == quote:
             return s[1:-1]
     return s
@@ -2431,7 +2440,7 @@ def urljoin(base, path):
     if isinstance(base, bytes):
         base = base.decode()
     if not isinstance(base, str) or not re.match(
-            r'^(?:https?:)?//', base):
+        r'^(?:https?:)?//', base):
         return None
     return urllib.parse.urljoin(base, path)
 
@@ -2682,8 +2691,8 @@ class LazyList(collections.abc.Sequence):
         else:
             raise TypeError('indices must be integers or slices')
         if ((start or 0) < 0 or (stop or 0) < 0
-                or (start is None and step < 0)
-                or (stop is None and step > 0)):
+            or (start is None and step < 0)
+            or (stop is None and step > 0)):
             # We need to consume the entire iterable to be able to slice from the end
             # Obviously, never use this with infinite iterables
             self._exhaust()
@@ -2725,7 +2734,6 @@ class LazyList(collections.abc.Sequence):
 
 
 class PagedList:
-
     class IndexError(IndexError):
         pass
 
@@ -2887,7 +2895,8 @@ class PlaylistEntries:
         if not playlist_items:
             playlist_items = f'{playlist_start}:{playlist_end}'
         elif playlist_start != 1 or playlist_end:
-            self.ydl.report_warning('Ignoring playliststart and playlistend because playlistitems was given', only_once=True)
+            self.ydl.report_warning('Ignoring playliststart and playlistend because playlistitems was given',
+                                    only_once=True)
 
         for index in self.parse_playlist_items(playlist_items):
             for i, entry in self[index]:
@@ -3138,7 +3147,7 @@ def merge_dicts(*dicts):
     for a_dict in dicts:
         for k, v in a_dict.items():
             if (v is not None and k not in merged
-                    or isinstance(v, str) and merged[k] == ''):
+                or isinstance(v, str) and merged[k] == ''):
                 merged[k] = v
     return merged
 
@@ -3154,7 +3163,6 @@ US_RATINGS = {
     'R': 16,
     'NC': 18,
 }
-
 
 TV_PARENTAL_GUIDELINES = {
     'TV-Y': 0,
@@ -3250,16 +3258,17 @@ def js_to_json(code, vars={}):
 
 def qualities(quality_ids):
     """ Get a numeric quality value out of a list of possible values """
+
     def q(qid):
         try:
             return quality_ids.index(qid)
         except ValueError:
             return -1
+
     return q
 
 
 POSTPROCESS_WHEN = ('pre_process', 'after_filter', 'before_dl', 'post_process', 'after_move', 'after_video', 'playlist')
-
 
 DEFAULT_OUTTMPL = {
     'default': '%(title)s [%(id)s].%(ext)s',
@@ -3294,7 +3303,6 @@ STR_FORMAT_RE_TMPL = r'''(?x)
         {1}  # conversion type
     )
 '''
-
 
 STR_FORMAT_TYPES = 'diouxXeEfFgGcrs'
 
@@ -3531,6 +3539,7 @@ def determine_protocol(info_dict):
 def render_table(header_row, data, delim=False, extra_gap=0, hide_empty=False):
     """ Render a list of rows, each as a list of values.
     Text after a \t will be right aligned """
+
     def width(string):
         return len(remove_terminal_sequences(string).replace('\t', ''))
 
@@ -3668,6 +3677,7 @@ def match_filter_func(filters):
             video_title = info_dict.get('title') or info_dict.get('id') or 'video'
             filter_str = ') | ('.join(map(str.strip, filters))
             return f'{video_title} does not pass filter ({filter_str}), skipping ..'
+
     return _match_func
 
 
@@ -3883,7 +3893,7 @@ def cli_option(params, command_option, param, separator=None):
     param = params.get(param)
     return ([] if param is None
             else [command_option, str(param)] if separator is None
-            else [f'{command_option}{separator}{param}'])
+    else [f'{command_option}{separator}{param}'])
 
 
 def cli_bool_option(params, command_option, param, true_value='true', false_value='false', separator=None):
@@ -4663,7 +4673,7 @@ class PerRequestProxyHandler(urllib.request.ProxyHandler):
         for type in ('http', 'https'):
             setattr(self, '%s_open' % type,
                     lambda r, proxy='__noproxy__', type=type, meth=self.proxy_open:
-                        meth(r, proxy, type))
+                    meth(r, proxy, type))
         urllib.request.ProxyHandler.__init__(self, proxies)
 
     def proxy_open(self, req, proxy, type):
@@ -4831,7 +4841,9 @@ def caesar(s, alphabet, shift):
 
 
 def rot47(s):
-    return caesar(s, r'''!"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_`abcdefghijklmnopqrstuvwxyz{|}~''', 47)
+    return caesar(s,
+                  r'''!"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_`abcdefghijklmnopqrstuvwxyz{|}~''',
+                  47)
 
 
 def parse_m3u8_attributes(attrib):
@@ -4992,7 +5004,8 @@ def write_xattr(path, key, value):
     if not exe:
         raise XAttrUnavailableError(
             'Couldn\'t find a tool to set the xattrs. Install either the python "xattr" or "pyxattr" modules or the '
-            + ('"xattr" binary' if sys.platform != 'linux' else 'GNU "attr" package (which contains the "setfattr" tool)'))
+            + (
+                '"xattr" binary' if sys.platform != 'linux' else 'GNU "attr" package (which contains the "setfattr" tool)'))
 
     value = value.decode()
     try:
@@ -5079,17 +5092,17 @@ def iri_to_uri(iri):
 
     return urllib.parse.urlunparse(
         (iri_parts.scheme,
-            net_location,
+         net_location,
 
-            urllib.parse.quote_plus(iri_parts.path, safe=r"!$%&'()*+,/:;=@|~"),
+         urllib.parse.quote_plus(iri_parts.path, safe=r"!$%&'()*+,/:;=@|~"),
 
-            # Unsure about the `safe` argument, since this is a legacy way of handling parameters.
-            urllib.parse.quote_plus(iri_parts.params, safe=r"!$%&'()*+,/:;=@|~"),
+         # Unsure about the `safe` argument, since this is a legacy way of handling parameters.
+         urllib.parse.quote_plus(iri_parts.params, safe=r"!$%&'()*+,/:;=@|~"),
 
-            # Not totally sure about the `safe` argument, since the source does not explicitly mention the query URI component.
-            urllib.parse.quote_plus(iri_parts.query, safe=r"!$%&'()*+,/:;=?@{|}~"),
+         # Not totally sure about the `safe` argument, since the source does not explicitly mention the query URI component.
+         urllib.parse.quote_plus(iri_parts.query, safe=r"!$%&'()*+,/:;=?@{|}~"),
 
-            urllib.parse.quote_plus(iri_parts.fragment, safe=r"!#$%&'()*+,/:;=?@{|}~")))
+         urllib.parse.quote_plus(iri_parts.fragment, safe=r"!#$%&'()*+,/:;=?@{|}~")))
 
     # Source for `safe` arguments: https://url.spec.whatwg.org/#percent-encoded-bytes.
 
@@ -5170,8 +5183,8 @@ def load_plugins(name, suffix, namespace):
 
 
 def traverse_obj(
-        obj, *path_list, default=None, expected_type=None, get_all=True,
-        casesense=True, is_user_input=False, traverse_string=False):
+    obj, *path_list, default=None, expected_type=None, get_all=True,
+    casesense=True, is_user_input=False, traverse_string=False):
     ''' Traverse nested list/dict/tuple
     @param path_list        A list of paths which are checked one by one.
                             Each path is a list of keys where each key is a:
@@ -5208,7 +5221,7 @@ def traverse_obj(
             if key is ...:
                 obj = (obj.values() if isinstance(obj, dict)
                        else obj if isinstance(obj, (list, tuple, LazyList))
-                       else str(obj) if traverse_string else [])
+                else str(obj) if traverse_string else [])
                 _current_depth += 1
                 depth = max(depth, _current_depth)
                 return [_traverse_obj(inner_obj, path[i + 1:], _current_depth) for inner_obj in obj]
@@ -5612,6 +5625,7 @@ def cached_method(f):
         if key not in cache:
             cache[key] = f(self, *args, **kwargs)
         return cache[key]
+
     return wrapper
 
 
@@ -5635,6 +5649,24 @@ class Namespace(types.SimpleNamespace):
     @property
     def items_(self):
         return self.__dict__.items()
+
+
+def has_drm_decrypted(encrypt_file: str, decrypt_file: str):
+    # AES-CBC模式必须使用填充,因此加密后的文件长度比解密的文件长度大.
+    # AES-CTR模式不使用填充,因此加密后的文件长度和解密的文件长度相同.
+    # 因此通过`截取文件后10M并比较MD5值`的方式来判断是否解密成功
+    encrypt_size = os.path.getsize(encrypt_file)
+    decrypt_size = os.path.getsize(decrypt_file)
+    if encrypt_size != decrypt_size:
+        return True
+    read_size = 10 * 1024 * 1024
+    with open(encrypt_file, mode='rb') as f:
+        f.seek(max(0, encrypt_size - read_size))
+        encrypt_md5 = hashlib.md5(f.read()).hexdigest()
+    with open(decrypt_file, mode='rb') as f:
+        f.seek(max(0, decrypt_size - read_size))
+        decrypt_md5 = hashlib.md5(f.read()).hexdigest()
+    return encrypt_md5 != decrypt_md5
 
 
 # Deprecated
