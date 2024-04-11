@@ -992,6 +992,10 @@ class GeoRestrictedError(ExtractorError):
         self.countries = countries
 
 
+class DRMDecryptionError(YoutubeDLError):
+    """DRM decryption error."""
+
+
 class UserNotLive(ExtractorError):
     """Error when a channel/user is not live"""
 
