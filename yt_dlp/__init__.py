@@ -823,6 +823,7 @@ def parse_options(argv=None):
         'skip_download': opts.skip_download,
         'format': opts.format,
         'allow_unplayable_formats': opts.allow_unplayable_formats,
+        'decrypt_key': opts.decrypt_key,
         'ignore_no_formats_error': opts.ignore_no_formats_error,
         'format_sort': opts.format_sort,
         'format_sort_force': opts.format_sort_force,

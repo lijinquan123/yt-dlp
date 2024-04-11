@@ -883,6 +883,10 @@ def create_parser():
             'Ignored if no merge is required. '
             f'(currently supported: {", ".join(sorted(FFmpegMergerPP.SUPPORTED_EXTS))})'))
     video_format.add_option(
+        '--decrypt-key',
+        action='store', dest='decrypt_key',
+        help="The key for decrypting the DRM encryption video, kid:key")
+    video_format.add_option(
         '--allow-unplayable-formats',
         action='store_true', dest='allow_unplayable_formats', default=False,
         help=optparse.SUPPRESS_HELP)

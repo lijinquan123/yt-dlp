@@ -12,6 +12,7 @@ import json
 import locale
 import operator
 import os
+import platform
 import random
 import re
 import shutil
@@ -22,6 +23,8 @@ import tempfile
 import time
 import tokenize
 import traceback
+from pathlib import Path
+
 import unicodedata
 
 from .cache import Cache
@@ -165,7 +168,7 @@ from .utils import (
     write_json_file,
     write_string,
 )
-from .utils._utils import _UnsafeExtensionError, _YDLLogger, _ProgressState
+from .utils._utils import DRMDecryptionError, _UnsafeExtensionError, _YDLLogger, _ProgressState
 from .utils.networking import (
     HTTPHeaderDict,
     clean_headers,
@@ -190,6 +193,24 @@ def _catch_unsafe_extension_error(func):
                 f'If you believe this is an error{bug_reports_message(",")}')
 
     return wrapper
+
+
+def has_drm_decrypted(encrypt_file: str, decrypt_file: (str, Path)):
+    # AES-CBC模式必须使用填充,因此加密后的文件长度比解密的文件长度大.
+    # AES-CTR模式不使用填充,因此加密后的文件长度和解密的文件长度相同.
+    # 因此通过`截取文件末尾10M`的方式来判断是否解密成功
+    encrypt_size = os.path.getsize(encrypt_file)
+    decrypt_size = os.path.getsize(decrypt_file)
+    if encrypt_size != decrypt_size:
+        return True
+    read_size = min(10 * 1024 * 1024, encrypt_size, decrypt_size)
+    with open(encrypt_file, mode='rb') as f:
+        f.seek(max(0, encrypt_size - read_size))
+        encrypt_bytes = f.read()
+    with open(decrypt_file, mode='rb') as f:
+        f.seek(max(0, decrypt_size - read_size))
+        decrypt_bytes = f.read()
+    return encrypt_bytes != decrypt_bytes
 
 
 class YoutubeDL:
@@ -2838,7 +2859,7 @@ class YoutubeDL:
         info_dict['_has_drm'] = any(  # or None ensures --clean-infojson removes it
             f.get('has_drm') and f['has_drm'] != 'maybe' for f in formats) or None
         if not self.params.get('allow_unplayable_formats'):
-            formats = [f for f in formats if not f.get('has_drm') or f['has_drm'] == 'maybe']
+            formats = [f for f in formats if not f.get('has_drm') or f['has_drm'] == 'maybe' or self.params.get('decrypt_key')]
 
         if formats and all(f.get('acodec') == f.get('vcodec') == 'none' for f in formats):
             self.report_warning(
@@ -3223,7 +3244,37 @@ class YoutubeDL:
         new_info = self._copy_infodict(info)
         if new_info.get('http_headers') is None:
             new_info['http_headers'] = self._calc_headers(new_info)
-        return fd.download(name, new_info, subtitle)
+
+        # 获取下载状态
+        success, real_download = fd.download(name, new_info, subtitle)
+        if test:
+            return success, real_download
+        # 解密DRM
+        decrypt_key = self.params.get('decrypt_key')
+        if new_info.get('has_drm') and decrypt_key:
+            self.to_screen(f'正在解密DRM视频, decrypt_key: {decrypt_key}')
+            decrypt_name = Path(name).parent / f'decrypt_{Path(name).name}'
+            cur_dir = Path(__file__).parent
+            decrypt_programs = {
+                'Windows': (cur_dir / 'mp4decrypt/mp4decrypt.exe').as_posix(),
+                'Linux': (cur_dir / 'mp4decrypt/mp4decrypt_linux').as_posix(),
+                'Darwin': (cur_dir / 'mp4decrypt/mp4decrypt_mac').as_posix(),
+            }
+            decrypt_command = f'{decrypt_programs[platform.system()]} --key "{decrypt_key}" "{name}" "{decrypt_name}"'
+            self.to_screen(f'正在解密DRM视频, 解密命令: {decrypt_command}')
+            os.system(decrypt_command)
+            has_decrypted = has_drm_decrypted(name, decrypt_name)
+            self.to_screen(f'解密状态: {has_decrypted}')
+            if has_decrypted:
+                self.to_screen(f'移到{decrypt_name}到{name}')
+                shutil.move(decrypt_name, name)
+            else:
+                with contextlib.suppress(Exception):
+                    os.remove(name)
+                with contextlib.suppress(Exception):
+                    os.remove(decrypt_name)
+                raise DRMDecryptionError("加解密文件相同")
+        return success, real_download
 
     def existing_file(self, filepaths, *, default_overwrite=True):
         existing_files = list(filter(os.path.exists, orderedSet(filepaths)))
