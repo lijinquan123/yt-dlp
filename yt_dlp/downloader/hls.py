@@ -6,7 +6,7 @@ import urllib.parse
 from . import get_suitable_downloader
 from .external import FFmpegFD
 from .fragment import FragmentFD
-from .. import webvtt
+from .. import webvtt_parser
 from ..dependencies import Cryptodome
 from ..utils import (
     bug_reports_message,
@@ -309,8 +309,8 @@ class HlsFD(FragmentFD):
                 adjust = 0
                 overflow = False
                 mpegts_last = None
-                for block in webvtt.parse_fragment(frag_content):
-                    if isinstance(block, webvtt.CueBlock):
+                for block in webvtt_parser.parse_fragment(frag_content):
+                    if isinstance(block, webvtt_parser.CueBlock):
                         extra_state['webvtt_mpegts_last'] = mpegts_last
                         if overflow:
                             extra_state['webvtt_mpegts_adjust'] += 1
@@ -326,7 +326,7 @@ class HlsFD(FragmentFD):
                         is_new = True
                         while i < len(dedup_window):
                             wcue = dedup_window[i]
-                            wblock = webvtt.CueBlock.from_json(wcue)
+                            wblock = webvtt_parser.CueBlock.from_json(wcue)
                             i += 1
                             if wblock.hinges(block):
                                 wcue['end'] = block.end
@@ -348,7 +348,7 @@ class HlsFD(FragmentFD):
 
                         # we only emit cues once they fall out of the duplicate window
                         continue
-                    elif isinstance(block, webvtt.Magic):
+                    elif isinstance(block, webvtt_parser.Magic):
                         # take care of MPEG PES timestamp overflow
                         if block.mpegts is None:
                             block.mpegts = 0
@@ -370,7 +370,7 @@ class HlsFD(FragmentFD):
                                     - (block.local - extra_state.get('webvtt_local', 0))
                                 )
                             continue
-                    elif isinstance(block, webvtt.HeaderBlock):
+                    elif isinstance(block, webvtt_parser.HeaderBlock):
                         if frag_index != 1:
                             # XXX: this should probably be silent as well
                             # or verify that all segments contain the same data
@@ -389,7 +389,7 @@ class HlsFD(FragmentFD):
 
                 output = io.StringIO()
                 for cue in dedup_window:
-                    webvtt.CueBlock.from_json(cue).write_into(output)
+                    webvtt_parser.CueBlock.from_json(cue).write_into(output)
 
                 return output.getvalue().encode()
 
