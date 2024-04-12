@@ -882,6 +882,11 @@ def create_parser():
         '--no-write-subs', '--no-write-srt',
         action='store_false', dest='writesubtitles',
         help='Do not write subtitle file (default)')
+    # 2024-04-11 修复字幕切片只有相对时间问题
+    subtitles.add_option(
+        '--reset-time-exts',
+        dest='resettimeexts', type=str, default='',
+        help='Reset start time of the subtitles (default "")')
     subtitles.add_option(
         '--write-auto-subs', '--write-automatic-subs',
         action='store_true', dest='writeautomaticsub', default=False,
