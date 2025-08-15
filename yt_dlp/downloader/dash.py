@@ -1,5 +1,6 @@
 import time
 import urllib.parse
+from decimal import Decimal
 
 from . import get_suitable_downloader
 from .fragment import FragmentFD
@@ -76,8 +77,16 @@ class DashSegmentsFD(FragmentFD):
         fragments = self._resolve_fragments(fmt['fragments'], ctx)
 
         frag_index = 0
+        total_time = Decimal('0')
+        # 2024-04-11 修复字幕切片只有相对时间问题
+        # 将绝对起始时间、文件类型添加到fragment中，方便只有相对时间的字幕切片处理时间值
         for i, fragment in enumerate(fragments):
             frag_index += 1
+            # 绝对起始时间为上一个总时间
+            absolute_start_time = total_time
+            # 必须要保证时长的精度
+            duration = Decimal(str(fragment.get('duration') or 0))
+            total_time += duration
             if frag_index <= ctx['fragment_index']:
                 continue
             fragment_url = fragment.get('url')
@@ -92,4 +101,7 @@ class DashSegmentsFD(FragmentFD):
                 'fragment_count': fragment.get('fragment_count'),
                 'index': i,
                 'url': fragment_url,
+                'ext': fmt.get('ext'),
+                'absolute_start_time': absolute_start_time,
+                'total_time': total_time,
             }

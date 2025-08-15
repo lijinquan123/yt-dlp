@@ -5,6 +5,9 @@ import math
 import os
 import struct
 import time
+from decimal import Decimal
+
+from webvtt import WebVTT
 
 from .common import FileDownloader
 from .http import HttpFD
@@ -15,6 +18,7 @@ from ..utils import DownloadError, RetryManager, traverse_obj
 from ..utils.networking import HTTPHeaderDict
 from ..utils.progress import ProgressCalculator
 
+from webvtt.parsers import WebVTTParser
 
 class HttpQuietDownloader(HttpFD):
     def to_screen(self, *args, **kargs):
@@ -346,6 +350,35 @@ class FragmentFD(FileDownloader):
                 _key_cache[url] = self.ydl.urlopen(self._prepare_url(info_dict, url)).read()
             return _key_cache[url]
 
+        def decrypt(fragment, frag_content):
+            # 解密切片
+            frag_content = decrypt_fragment(fragment, frag_content)
+            # 2024-04-11 修复字幕切片只有相对时间问题
+            resettimeexts = self.params.get('resettimeexts') or []
+            if resettimeexts and fragment.get('ext') in resettimeexts:
+                frag_content = fix_srt(fragment, frag_content.decode('utf-8').split('\n'))
+            return frag_content
+
+        def fix_srt(fragment, lines: list):
+            # 2024-04-11 修复字幕切片只有相对时间问题
+            absolute_start_time = fragment['absolute_start_time']
+            wp = WebVTTParser()
+            wp._validate(lines)
+            wp._parse(lines)
+            output = []
+            for caption in WebVTT(captions=wp.captions, styles=wp.styles).captions:
+                caption._start = Decimal(str(caption.start_in_seconds)) + absolute_start_time
+                caption._end = Decimal(str(caption.end_in_seconds)) + absolute_start_time
+                output.append("")
+                if caption.identifier:
+                    output.append(caption.identifier)
+                output.append('{} --> {}'.format(caption.start, caption.end))
+                output.extend(caption.lines)
+            if not output:
+                output.append('')
+            output.append('')
+            return '\n'.join(output).encode('utf-8')
+
         def decrypt_fragment(fragment, frag_content):
             if frag_content is None:
                 return
@@ -362,7 +395,7 @@ class FragmentFD(FileDownloader):
                 return frag_content
             return unpad_pkcs7(aes_cbc_decrypt_bytes(frag_content, decrypt_info['KEY'], iv))
 
-        return decrypt_fragment
+        return decrypt
 
     def download_and_append_fragments_multiple(self, *args, **kwargs):
         """

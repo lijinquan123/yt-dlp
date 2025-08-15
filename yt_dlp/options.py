@@ -928,6 +928,10 @@ def create_parser():
             'Ignored if no merge is required. '
             f'(currently supported: {", ".join(sorted(FFmpegMergerPP.SUPPORTED_EXTS))})'))
     video_format.add_option(
+        '--decrypt-key',
+        action='store', dest='decrypt_key',
+        help="The key for decrypting the DRM encryption video, kid:key")
+    video_format.add_option(
         '--allow-unplayable-formats',
         action='store_true', dest='allow_unplayable_formats', default=False,
         help=optparse.SUPPRESS_HELP)
@@ -945,6 +949,11 @@ def create_parser():
         '--no-write-subs', '--no-write-srt',
         action='store_false', dest='writesubtitles',
         help='Do not write subtitle file (default)')
+    # 2024-04-11 修复字幕切片只有相对时间问题
+    subtitles.add_option(
+        '--reset-time-exts',
+        dest='resettimeexts', type=str, default='',
+        help='Reset start time of the subtitles (default "")')
     subtitles.add_option(
         '--write-auto-subs', '--write-automatic-subs',
         action='store_true', dest='writeautomaticsub', default=False,

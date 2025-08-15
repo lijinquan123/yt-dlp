@@ -74,6 +74,15 @@ def _exit(status=0, *args):
     raise SystemExit(status)
 
 
+def commalist(values):
+    vals = []
+    for val in values.split(','):
+        val = val.strip()
+        if val:
+            vals.append(val)
+    return vals
+
+
 def get_urls(urls, batchfile, verbose):
     """
     @param verbose      -1: quiet, 0: normal, 1: verbose
@@ -829,6 +838,7 @@ def parse_options(argv=None):
         'skip_download': opts.skip_download,
         'format': opts.format,
         'allow_unplayable_formats': opts.allow_unplayable_formats,
+        'decrypt_key': opts.decrypt_key,
         'ignore_no_formats_error': opts.ignore_no_formats_error,
         'format_sort': opts.format_sort,
         'format_sort_force': opts.format_sort_force,
@@ -889,6 +899,8 @@ def parse_options(argv=None):
         'writewebloclink': opts.writewebloclink,
         'writedesktoplink': opts.writedesktoplink,
         'writesubtitles': opts.writesubtitles,
+        # 2024-04-11 修复字幕切片只有相对时间问题
+        'resettimeexts': commalist(opts.resettimeexts),
         'writeautomaticsub': opts.writeautomaticsub,
         'allsubtitles': opts.allsubtitles,
         'listsubtitles': opts.listsubtitles,
